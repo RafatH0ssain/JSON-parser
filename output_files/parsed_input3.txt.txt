@@ -1,0 +1,11 @@
+Object:
+  Pair:
+    Key:     Key: person
+    Value:     Object:
+      Pair:
+        Key:         Key: firstName
+        Value:         String: Bob      Pair:
+        Key:         Key: lastName
+        Value:         String: Smith  Pair:
+    Key:     Key: age
+    Value:     Number: 45

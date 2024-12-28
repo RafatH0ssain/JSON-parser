@@ -1,0 +1,1 @@
+Error type 3 at <NUMBER, 0123>: Invalid Numbers: Leading zeros are not allowed.

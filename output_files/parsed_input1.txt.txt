@@ -1,0 +1,8 @@
+Object:
+  Pair:
+    Key:     Key: name
+    Value:     String: Alice  Pair:
+    Key:     Key: age
+    Value:     Number: 30  Pair:
+    Key:     Key: isStudent
+    Value:     FALSE: None

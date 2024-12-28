@@ -1,0 +1,9 @@
+<LBRACE>
+<STRING, key>
+<COLON>
+<STRING, value1>
+<COMMA>
+<STRING, key>
+<COLON>
+<STRING, value2>
+<RBRACE>
