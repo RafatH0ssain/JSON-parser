@@ -1,0 +1,5 @@
+<LBRACE>
+<STRING, age>
+<COLON>
+<NUMBER, 0123>
+<RBRACE>

@@ -1,0 +1,5 @@
+<LBRACE>
+<STRING, value>
+<COLON>
+<NUMBER, 3.>
+<RBRACE>

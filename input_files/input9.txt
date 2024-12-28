@@ -1,0 +1,5 @@
+<LBRACKET>
+<NUMBER, 1>
+<COMMA>
+<STRING, two>
+<RBRACKET>

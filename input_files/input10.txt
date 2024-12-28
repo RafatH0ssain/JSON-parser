@@ -1,0 +1,5 @@
+<LBRACE>
+<STRING, key>
+<COLON>
+<STRING, true>
+<RBRACE>

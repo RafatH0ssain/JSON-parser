@@ -1,0 +1,17 @@
+<LBRACE>
+<STRING, person>
+<COLON>
+<LBRACE>
+<STRING, firstName>
+<COLON>
+<STRING, Bob>
+<COMMA>
+<STRING, lastName>
+<COLON>
+<STRING, Smith>
+<RBRACE>
+<COMMA>
+<STRING, age>
+<COLON>
+<NUMBER, 45>
+<RBRACE>
