@@ -159,15 +159,21 @@ class Parser:
         return node
 
 def parse_token_line(line):
-    
+    # Trim any surrounding whitespace and then strip angle brackets (< >)
     line = line.strip().strip("<>").split(", ", 1)
+    
     if len(line) < 1:
         raise ValueError(f"Invalid token line format: {line}")
+    
     token_type_str = line[0].strip()
-    token_type = getattr(TokenType, token_type_str, None)
+    token_type = getattr(TokenType, token_type_str, None)  # This will fetch the corresponding TokenType enum
+    
     if token_type is None:
         raise ValueError(f"Invalid token type in line: {line}")
+    
+    # Get the value (it may be None if no value is present)
     token_value = line[1].strip() if len(line) > 1 else None
+    
     return Token(token_type, token_value)
 
 def load_tokens_from_file(input_file):
@@ -198,9 +204,10 @@ def process_file(input_file, output_file):
         print(f"Parsing error in {input_file}: {e}")
 
 if __name__ == "__main__":
-    
-    input_dir = "input_files"
-    output_dir = "output_files"
+
+    # Use relative paths or dynamically construct the absolute path
+    input_dir = os.path.join(os.getcwd(), "input_files")  # Current directory + input_files
+    output_dir = os.path.join(os.getcwd(), "output_files")  # Current directory + output_files
     os.makedirs(output_dir, exist_ok=True)
 
     for input_filename in os.listdir(input_dir):
