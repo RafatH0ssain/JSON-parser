@@ -1,6 +1,9 @@
+import sys
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton
 from lexer import TokenType, Token
-import os
+from PyQt5.QtCore import Qt
 
+# Add your existing ParseNode and Parser classes here
 class ParseNode:
     def __init__(self, node_type, value=None):
         self.node_type = node_type
@@ -33,18 +36,7 @@ class ParseNode:
         
         return result
 
-class SemanticError(Exception):
-    
-    def __init__(self, error_type, token, message):
-        self.error_type = error_type
-        self.token = token
-        self.message = message
-
-    def __str__(self):
-        return f"Error type {self.error_type} at {self.token}: {self.message}"
-
 class Parser:
-    
     def __init__(self, tokens):
         self.tokens = tokens
         self.current_token_index = 0
@@ -78,10 +70,8 @@ class Parser:
             self.eat(TokenType.STRING)
             return ParseNode("String", token.value)
         elif token.type == TokenType.NUMBER:
-            # Invalid Numbers (Type 3 Error): Check for leading zeros
             if token.value.startswith("0") and len(token.value) > 1 and not token.value.startswith("0."):
                 raise SemanticError(3, token, "Invalid Numbers: Leading zeros are not allowed.")
-            # Invalid Decimal Numbers (Type 1 Error): Decimal numbers should have digits on both sides
             if '.' in token.value and (token.value.startswith('.') or token.value.endswith('.')):
                 raise SemanticError(1, token, "Invalid Decimal Numbers")
             self.eat(TokenType.NUMBER)
@@ -114,15 +104,10 @@ class Parser:
             raise Exception(f"Expected key (STRING) but found {self.current_token.type} at position {self.current_token_index}")
         key_token = self.current_token
 
-        # Empty Key (Type 2 Error): Ensure keys are not empty
         if not key_token.value.strip():
             raise SemanticError(2, key_token, "Key cannot be empty")
-
-        # Reserved Words as Dictionary Key (Type 4 Error): Ensure reserved words are not used as dictionary keys
         if key_token.value in ["true", "false"]:
             raise SemanticError(4, key_token, f"Reserved words '{key_token.value}' cannot be used as keys")
-
-        # No Duplicate Keys in Dictionary (Type 5 Error): Ensure no duplicate keys in the dictionary
         if key_token.value in seen_keys:
             raise SemanticError(5, key_token, "Duplicate keys in dictionary")
         seen_keys.add(key_token.value)
@@ -150,7 +135,6 @@ class Parser:
             while self.current_token.type == TokenType.COMMA:
                 self.eat(TokenType.COMMA)
                 next_element = self.parse_value()
-                # Consistent Types for List Elements (Type 6 Error): Ensure all list elements are of the same type
                 if next_element.node_type != element_type:
                     raise SemanticError(6, next_element.value, "Inconsistent types in list elements")
                 node.add_child(next_element)
@@ -159,58 +143,79 @@ class Parser:
         return node
 
 def parse_token_line(line):
-    # Trim any surrounding whitespace and then strip angle brackets (< >)
     line = line.strip().strip("<>").split(", ", 1)
     
     if len(line) < 1:
         raise ValueError(f"Invalid token line format: {line}")
     
     token_type_str = line[0].strip()
-    token_type = getattr(TokenType, token_type_str, None)  # This will fetch the corresponding TokenType enum
+    token_type = getattr(TokenType, token_type_str, None)  
     
     if token_type is None:
         raise ValueError(f"Invalid token type in line: {line}")
     
-    # Get the value (it may be None if no value is present)
     token_value = line[1].strip() if len(line) > 1 else None
     
     return Token(token_type, token_value)
 
-def load_tokens_from_file(input_file):
-    
+def parse_input_text(input_text):
     tokens = []
-    with open(input_file, 'r') as f:
-        for line in f:
-            token = parse_token_line(line)
-            tokens.append(token)
+    lines = input_text.splitlines()
+    for line in lines:
+        token = parse_token_line(line)
+        tokens.append(token)
     return tokens
 
-def process_file(input_file, output_file):
-    
+def process_input(input_text):
     try:
-        tokens = load_tokens_from_file(input_file)
+        tokens = parse_input_text(input_text)
         parser = Parser(tokens)
         parse_tree = parser.parse()
-        with open(output_file, 'w') as f:
-            f.write(str(parse_tree))
-        print(f"Parse tree successfully written to {output_file}")
+        return str(parse_tree)
     except SemanticError as se:
-        with open(output_file, 'w') as f:
-            f.write(str(se))
-        print(str(se))
+        return str(se)
     except Exception as e:
-        with open(output_file, 'w') as f:
-            f.write(f"Parsing Error: {e}")
-        print(f"Parsing error in {input_file}: {e}")
+        return f"Parsing Error: {e}"
 
-if __name__ == "__main__":
+def run_parser():
+    input_text = text_input.toPlainText()  # Get the text from the QTextEdit widget
+    result = process_input(input_text)
+    text_output.setPlainText(result)  # Set the result in the output QTextEdit widget
 
-    # Use relative paths or dynamically construct the absolute path
-    input_dir = os.path.join(os.getcwd(), "input_files")  # Current directory + input_files
-    output_dir = os.path.join(os.getcwd(), "output_files")  # Current directory + output_files
-    os.makedirs(output_dir, exist_ok=True)
+# PyQt Setup
+app = QApplication(sys.argv)
 
-    for input_filename in os.listdir(input_dir):
-        input_file_path = os.path.join(input_dir, input_filename)
-        output_file_path = os.path.join(output_dir, f"parsed_{input_filename}.txt")
-        process_file(input_file_path, output_file_path)
+# Main Window
+window = QWidget()
+window.setWindowTitle("JSON Parser App")
+
+# Layout
+layout = QVBoxLayout()
+
+# Input Textbox
+text_input_label = QLabel("Enter Tokens:")
+layout.addWidget(text_input_label)
+
+text_input = QTextEdit()
+text_input.setFixedHeight(150)
+layout.addWidget(text_input)
+
+# Output Textbox
+text_output_label = QLabel("Parse Tree / Error Output:")
+layout.addWidget(text_output_label)
+
+text_output = QTextEdit()
+text_output.setReadOnly(True)
+text_output.setFixedHeight(250)
+layout.addWidget(text_output)
+
+# Parse Button
+parse_button = QPushButton("Parse")
+parse_button.clicked.connect(run_parser)
+layout.addWidget(parse_button)
+
+# Set the layout and show the window
+window.setLayout(layout)
+window.show()
+
+sys.exit(app.exec_())
