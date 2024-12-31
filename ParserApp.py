@@ -36,6 +36,16 @@ class ParseNode:
         
         return result
 
+class SemanticError(Exception):
+    
+    def __init__(self, error_type, token, message):
+        self.error_type = error_type
+        self.token = token
+        self.message = message
+
+    def __str__(self):
+        return f"Error type {self.error_type} at {self.token}: {self.message}"
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
