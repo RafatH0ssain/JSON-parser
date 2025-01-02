@@ -1,231 +1,166 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton
-from lexer import TokenType, Token
 from PyQt5.QtCore import Qt
-
-# Add your existing ParseNode and Parser classes here
-class ParseNode:
-    def __init__(self, node_type, value=None):
-        self.node_type = node_type
-        self.value = value
-        self.children = []
-
-    def add_child(self, child):
-        self.children.append(child)
-
-    def __repr__(self, level=0):
-        indent = " " * (level * 2)
-        if self.node_type == "Object":
-            result = f"{indent}Object:\n"
-            for child in self.children:
-                result += child.__repr__(level + 1)
-        elif self.node_type == "Array":
-            result = f"{indent}Array:\n"
-            for child in self.children:
-                result += child.__repr__(level + 1)
-        elif self.node_type == "Pair":
-            key_node = self.children[0]
-            value_node = self.children[1]
-            result = f"{indent}Pair:\n"
-            result += f"{indent}  Key: {key_node.__repr__(level + 1)}\n"
-            result += f"{indent}  Value: {value_node.__repr__(level + 1)}"
-        elif self.node_type == "Key":
-            result = f"{indent}Key: {self.value}"
-        else:
-            result = f"{indent}{self.node_type}: {self.value}"
-        
-        return result
-
-class SemanticError(Exception):
-    
-    def __init__(self, error_type, token, message):
-        self.error_type = error_type
-        self.token = token
-        self.message = message
-
-    def __str__(self):
-        return f"Error type {self.error_type} at {self.token}: {self.message}"
+from lexer import Lexer, TokenType, Token
+from parser import Parser, ParseNode, SemanticError
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
-        self.current_token_index = 0
-        self.current_token = self.tokens[self.current_token_index]
+        self.current_pos = 0
+        self.current_token = self.tokens[self.current_pos]
 
-    def get_next_token(self):
-        self.current_token_index += 1
-        if self.current_token_index < len(self.tokens):
-            self.current_token = self.tokens[self.current_token_index]
+    def advance(self):
+        self.current_pos += 1
+        if self.current_pos < len(self.tokens):
+            self.current_token = self.tokens[self.current_pos]
         else:
             self.current_token = Token(TokenType.EOF)
 
-    def eat(self, token_type):
-        if self.current_token.type == token_type:
-            self.get_next_token()
-        else:
-            raise Exception(f"Expected {token_type}, but got {self.current_token.type} at position {self.current_token_index}")
-
     def parse(self):
-        return self.parse_value()
-
-    def parse_value(self):
-        token = self.current_token
-        if token.type == TokenType.LBRACE:
-            return self.parse_dict()
-        elif token.type == TokenType.LBRACKET:
-            return self.parse_list()
-        elif token.type == TokenType.STRING:
-            if token.value in ["true", "false"]:
-                raise SemanticError(7, token, "Reserved keywords cannot be used as strings")
-            self.eat(TokenType.STRING)
-            return ParseNode("String", token.value)
-        elif token.type == TokenType.NUMBER:
-            if token.value.startswith("0") and len(token.value) > 1 and not token.value.startswith("0."):
-                raise SemanticError(3, token, "Invalid Numbers: Leading zeros are not allowed.")
-            if '.' in token.value and (token.value.startswith('.') or token.value.endswith('.')):
-                raise SemanticError(1, token, "Invalid Decimal Numbers")
-            self.eat(TokenType.NUMBER)
-            return ParseNode("Number", token.value)
-        elif token.type in [TokenType.TRUE, TokenType.FALSE, TokenType.NULL]:
-            self.eat(token.type)
-            return ParseNode(str(token.type), token.value)
-        elif token.type == TokenType.EOF:
-            raise Exception("Unexpected EOF while parsing value")
+        # Start parsing based on the first token type
+        if self.current_token.type == TokenType.LBRACE:
+            return self.parse_object()  # Start parsing an object
         else:
-            raise Exception(f"Unexpected token {token.type} in value at position {self.current_token_index}")
+            raise SyntaxError(f"Unexpected token type at the beginning: {self.current_token.type}")
 
-    def parse_dict(self):
-        node = ParseNode("Object")
-        seen_keys = set()
-        self.eat(TokenType.LBRACE)
-        if self.current_token.type != TokenType.RBRACE:
-            self.parse_pair(node, seen_keys)
-            while self.current_token.type == TokenType.COMMA:
-                self.eat(TokenType.COMMA)
-                if self.current_token.type != TokenType.STRING:
-                    raise Exception(f"Unexpected token {self.current_token.type} in object at position {self.current_token_index}")
-                self.parse_pair(node, seen_keys)
-        self.eat(TokenType.RBRACE)
-        
-        return node
+    def parse_object(self):
+        output = "Object:\n"
+        self.advance()  # Skip the LBRACE
 
-    def parse_pair(self, node, seen_keys):
-        if self.current_token.type != TokenType.STRING:
-            raise Exception(f"Expected key (STRING) but found {self.current_token.type} at position {self.current_token_index}")
+        # Check for empty objects
+        if self.current_token.type == TokenType.RBRACE:
+            self.advance()  # Skip the RBRACE for empty object
+            return output
+
+        while self.current_token.type != TokenType.EOF:
+            output += self.parse_pair()
+
+            if self.current_token.type == TokenType.RBRACE:
+                self.advance()  # Skip RBRACE
+                break
+            elif self.current_token.type == TokenType.COMMA:
+                self.advance()  # Skip COMMA
+            else:
+                raise SyntaxError(f"Expected ',' or '}}' but found {self.current_token.type}")
+
+        return output
+
+    def parse_pair(self):
+        output = f"  Pair:\n"
         key_token = self.current_token
 
-        if not key_token.value.strip():
-            raise SemanticError(2, key_token, "Key cannot be empty")
-        if key_token.value in ["true", "false"]:
-            raise SemanticError(4, key_token, f"Reserved words '{key_token.value}' cannot be used as keys")
-        if key_token.value in seen_keys:
-            raise SemanticError(5, key_token, "Duplicate keys in dictionary")
-        seen_keys.add(key_token.value)
-        self.eat(TokenType.STRING)
-
-        pair_node = ParseNode("Pair")
-        key_node = ParseNode("Key", key_token.value)
-        pair_node.add_child(key_node)
+        if key_token.type != TokenType.STRING:
+            raise SyntaxError(f"Expected a string key but found {key_token.type}")
+        
+        output += f"    Key: {key_token.type}: {key_token.value}\n"
+        self.advance()  # Skip the key token
 
         if self.current_token.type != TokenType.COLON:
-            raise Exception(f"Expected ':' but found {self.current_token.type} at position {self.current_token_index}")
-        self.eat(TokenType.COLON)
-
-        pair_node.add_child(self.parse_value())
-        node.add_child(pair_node)
-
-    def parse_list(self):
-        node = ParseNode("Array")
-        self.eat(TokenType.LBRACKET)
-        if self.current_token.type != TokenType.RBRACKET:
-            element_type = None
-            first_element = self.parse_value()
-            element_type = first_element.node_type
-            node.add_child(first_element)
-            while self.current_token.type == TokenType.COMMA:
-                self.eat(TokenType.COMMA)
-                next_element = self.parse_value()
-                if next_element.node_type != element_type:
-                    raise SemanticError(6, next_element.value, "Inconsistent types in list elements")
-                node.add_child(next_element)
-        self.eat(TokenType.RBRACKET)
+            raise SyntaxError(f"Expected ':' after key but found {self.current_token.type}")
         
-        return node
+        self.advance()  # Skip the COLON
 
-def parse_token_line(line):
-    line = line.strip().strip("<>").split(", ", 1)
-    
-    if len(line) < 1:
-        raise ValueError(f"Invalid token line format: {line}")
-    
-    token_type_str = line[0].strip()
-    token_type = getattr(TokenType, token_type_str, None)  
-    
-    if token_type is None:
-        raise ValueError(f"Invalid token type in line: {line}")
-    
-    token_value = line[1].strip() if len(line) > 1 else None
-    
-    return Token(token_type, token_value)
+        value_token = self.current_token
+        if value_token.type in [TokenType.STRING, TokenType.NUMBER, TokenType.TRUE, TokenType.FALSE, TokenType.NULL]:
+            output += f"    Value: {value_token.type}: {value_token.value}\n"
+        else:
+            raise SyntaxError(f"Unexpected value token type: {value_token.type}")
+        
+        self.advance()  # Skip the value token
+        return output
 
-def parse_input_text(input_text):
-    tokens = []
-    lines = input_text.splitlines()
-    for line in lines:
-        token = parse_token_line(line)
-        tokens.append(token)
-    return tokens
+class ParserApp(QWidget):
+    def __init__(self):
+        super().__init__()
 
-def process_input(input_text):
-    try:
-        tokens = parse_input_text(input_text)
-        parser = Parser(tokens)
-        parse_tree = parser.parse()
-        return str(parse_tree)
-    except SemanticError as se:
-        return str(se)
-    except Exception as e:
-        return f"Parsing Error: {e}"
+        self.setWindowTitle("JSON Lexer and Parser")
+        self.setGeometry(100, 100, 600, 400)
 
-def run_parser():
-    input_text = text_input.toPlainText()  # Get the text from the QTextEdit widget
-    result = process_input(input_text)
-    text_output.setPlainText(result)  # Set the result in the output QTextEdit widget
+        # Layout
+        layout = QVBoxLayout()
 
-# PyQt Setup
-app = QApplication(sys.argv)
+        # Input Label
+        self.input_label = QLabel("Enter JSON-like string:", self)
+        layout.addWidget(self.input_label)
 
-# Main Window
-window = QWidget()
-window.setWindowTitle("JSON Parser App")
+        # Input Field (QTextEdit)
+        self.input_text = QTextEdit(self)
+        self.input_text.setPlaceholderText('{"name": "Bob", "age": 25, "height": 5.75, "active": true}')
+        layout.addWidget(self.input_text)
 
-# Layout
-layout = QVBoxLayout()
+        # Output Label
+        self.output_label = QLabel("Parsed Output:", self)
+        layout.addWidget(self.output_label)
 
-# Input Textbox
-text_input_label = QLabel("Enter Tokens:")
-layout.addWidget(text_input_label)
+        # Output Field (QTextEdit)
+        self.output_text = QTextEdit(self)
+        self.output_text.setReadOnly(True)
+        layout.addWidget(self.output_text)
 
-text_input = QTextEdit()
-text_input.setFixedHeight(150)
-layout.addWidget(text_input)
+        # Parse Button
+        self.parse_button = QPushButton("Parse", self)
+        self.parse_button.clicked.connect(self.parse_input)
+        layout.addWidget(self.parse_button)
 
-# Output Textbox
-text_output_label = QLabel("Parse Tree / Error Output:")
-layout.addWidget(text_output_label)
+        # Set the layout to the window
+        self.setLayout(layout)
 
-text_output = QTextEdit()
-text_output.setReadOnly(True)
-text_output.setFixedHeight(250)
-layout.addWidget(text_output)
+    def parse_input(self):
+        input_text = self.input_text.toPlainText()
+        lexer = Lexer(input_text)
 
-# Parse Button
-parse_button = QPushButton("Parse")
-parse_button.clicked.connect(run_parser)
-layout.addWidget(parse_button)
+        try:
+            # Tokenize the input
+            tokens = lexer.tokenize()
 
-# Set the layout and show the window
-window.setLayout(layout)
-window.show()
+            # Now parse the tokens
+            parser = Parser(tokens)
+            parsed_output = parser.parse()
 
-sys.exit(app.exec_())
+            # Display the parsed output
+            self.output_text.setPlainText(parsed_output)
+
+        except SemanticError as se:
+            # Handle semantic errors (e.g., invalid key names, invalid tokens, etc.)
+            self.output_text.setPlainText(f"Semantic Error: {str(se)}")
+
+        except SyntaxError as se:
+            # Handle syntax errors (e.g., unexpected tokens, missing braces, etc.)
+            self.output_text.setPlainText(f"Syntax Error: {str(se)}")
+
+        except Exception as e:
+            # Handle any other general errors
+            self.output_text.setPlainText(f"Error: {str(e)}")
+
+            input_text = self.input_text.toPlainText()
+            lexer = Lexer(input_text)
+
+            try:
+                # Tokenize the input
+                tokens = lexer.tokenize()
+
+                # Now parse the tokens
+                parser = Parser(tokens)
+                parsed_output = parser.parse()
+
+                # Display the parsed output
+                self.output_text.setPlainText(str(parsed_output))
+
+            except SemanticError as se:
+                # Handle semantic errors (e.g., invalid key names, invalid tokens, etc.)
+                self.output_text.setPlainText(f"Semantic Error: {str(se)}")
+
+            except Exception as e:
+                # Handle general errors (e.g., unexpected tokens, parsing errors, etc.)
+                self.output_text.setPlainText(f"Error: {str(e)}")
+
+def main():
+    app = QApplication(sys.argv)
+    window = ParserApp()
+    window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
