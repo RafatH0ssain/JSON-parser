@@ -1,13 +1,6 @@
-<LBRACE>
-<STRING, name>
-<COLON>
-<STRING, Alice>
-<COMMA>
-<STRING, age>
-<COLON>
-<NUMBER, 30>
-<COMMA>
-<STRING, isStudent>
-<COLON>
-<FALSE>
-<RBRACE>
+{
+  "name": "Alice",
+  "age": 30,
+  "height": 5.5,
+  "is_active": true
+}
