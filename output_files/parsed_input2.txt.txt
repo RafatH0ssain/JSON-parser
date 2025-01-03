@@ -1,5 +1,1 @@
 Object:
-  Pair:
-    Key:     Key: scores
-    Value:     Array:
-      Number: 100      Number: 95      Number: 85

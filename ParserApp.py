@@ -20,7 +20,7 @@ class Parser:
     def parse(self):
         # Start parsing based on the first token type
         if self.current_token.type == TokenType.LBRACE:
-            return self.parse_object()  # Start parsing an object
+            return self.parse_object()
         else:
             raise SyntaxError(f"Unexpected token type at the beginning: {self.current_token.type}")
 
@@ -30,17 +30,17 @@ class Parser:
 
         # Check for empty objects
         if self.current_token.type == TokenType.RBRACE:
-            self.advance()  # Skip the RBRACE for empty object
+            self.advance()
             return output
 
         while self.current_token.type != TokenType.EOF:
             output += self.parse_pair()
 
             if self.current_token.type == TokenType.RBRACE:
-                self.advance()  # Skip RBRACE
+                self.advance()
                 break
             elif self.current_token.type == TokenType.COMMA:
-                self.advance()  # Skip COMMA
+                self.advance()
             else:
                 raise SyntaxError(f"Expected ',' or '}}' but found {self.current_token.type}")
 
@@ -50,25 +50,38 @@ class Parser:
         output = f"  Pair:\n"
         key_token = self.current_token
 
-        if key_token.type != TokenType.STRING:
-            raise SyntaxError(f"Expected a string key but found {key_token.type}")
-        
         output += f"    Key: {key_token.type}: {key_token.value}\n"
-        self.advance()  # Skip the key token
+        self.advance()  # Advance after reading the key token
 
-        if self.current_token.type != TokenType.COLON:
-            raise SyntaxError(f"Expected ':' after key but found {self.current_token.type}")
+        # Check for colon (':') after key
+        # if self.current_token.type != TokenType.COLON:
+        #     raise SyntaxError(f"Expected ':' after key but found {self.current_token.type}")
         
-        self.advance()  # Skip the COLON
+        # self.advance()  # Advance after the colon to move to the value token
 
+        # Now handle the value token
         value_token = self.current_token
-        if value_token.type in [TokenType.STRING, TokenType.NUMBER, TokenType.TRUE, TokenType.FALSE, TokenType.NULL]:
+
+        if value_token.type == TokenType.STRING:
             output += f"    Value: {value_token.type}: {value_token.value}\n"
+        elif value_token.type == TokenType.NUMBER:
+            output += f"    Value: {value_token.type}: {value_token.value}\n"
+        elif value_token.type == TokenType.TRUE:
+            output += f"    Value: {value_token.type}: {value_token.value}\n"
+        elif value_token.type == TokenType.FALSE:
+            output += f"    Value: {value_token.type}: {value_token.value}\n"
+        elif value_token.type == TokenType.NULL:
+            output += f"    Value: {value_token.type}: {value_token.value}\n"
+        elif value_token.type == TokenType.LBRACE:  # Handle nested object
+            output += f"    Value: Object:\n"
+            self.advance()  # Move to the next token (the opening brace)
+            output += self.parse_object()  # Recursively parse the nested object
         else:
             raise SyntaxError(f"Unexpected value token type: {value_token.type}")
-        
-        self.advance()  # Skip the value token
+
+        self.advance()  # Move past the value token (if it's not EOF)
         return output
+
 
 class ParserApp(QWidget):
     def __init__(self):
@@ -107,7 +120,7 @@ class ParserApp(QWidget):
         self.setLayout(layout)
 
     def parse_input(self):
-        input_text = self.input_text.toPlainText()
+        input_text = self.input_text.toPlainText().strip()  # Strip any extra spaces or line breaks
         lexer = Lexer(input_text)
 
         try:
@@ -133,34 +146,12 @@ class ParserApp(QWidget):
             # Handle any other general errors
             self.output_text.setPlainText(f"Error: {str(e)}")
 
-            input_text = self.input_text.toPlainText()
-            lexer = Lexer(input_text)
-
-            try:
-                # Tokenize the input
-                tokens = lexer.tokenize()
-
-                # Now parse the tokens
-                parser = Parser(tokens)
-                parsed_output = parser.parse()
-
-                # Display the parsed output
-                self.output_text.setPlainText(str(parsed_output))
-
-            except SemanticError as se:
-                # Handle semantic errors (e.g., invalid key names, invalid tokens, etc.)
-                self.output_text.setPlainText(f"Semantic Error: {str(se)}")
-
-            except Exception as e:
-                # Handle general errors (e.g., unexpected tokens, parsing errors, etc.)
-                self.output_text.setPlainText(f"Error: {str(e)}")
 
 def main():
     app = QApplication(sys.argv)
     window = ParserApp()
     window.show()
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()

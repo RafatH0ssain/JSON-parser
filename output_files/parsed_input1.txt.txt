@@ -1,8 +1,13 @@
 Object:
   Pair:
-    Key:     Key: name
-    Value:     String: Alice  Pair:
-    Key:     Key: age
-    Value:     Number: 30  Pair:
-    Key:     Key: isStudent
-    Value:     FALSE: None
+    Key: STRING: name
+    Value: STRING: Alice
+  Pair:
+    Key: STRING: age
+    Value: NUMBER: 30
+  Pair:
+    Key: STRING: height
+    Value: NUMBER: 5.5
+  Pair:
+    Key: STRING: is_active
+    Value: TRUE: None
