@@ -1,0 +1,10 @@
+# Build output
+dist/
+build/
+*.exe
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+.venv/

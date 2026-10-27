@@ -5,8 +5,8 @@ class TokenType:
     RBRACE = 'RBRACE'  # '}'
     LBRACKET = 'LBRACKET'  # '['
     RBRACKET = 'RBRACKET'  # ']'
-    STRING = 'STRING'  # Tree leaves or node names
-    NUMBER = 'NUMBER'  # Edge lengths or numeric values
+    STRING = 'STRING'  # quoted text, including object keys
+    NUMBER = 'NUMBER'  # integer or float literal
     EOF = 'EOF'  # End of input
     TRUE = 'TRUE'  # true
     FALSE = 'FALSE'  # false
