@@ -13,7 +13,7 @@ Objects, arrays, strings (with escape sequences), numbers (optional sign, decima
 
 ## Semantic Rules
 
-The batch parser reports a numbered `SemanticError` with the offending token when a rule is broken:
+The parser reports a numbered `SemanticError` with the offending token when a rule is broken:
 
 1. Decimal numbers need digits on both sides of the point.
 2. Object keys cannot be empty.
@@ -56,16 +56,50 @@ pip install PyQt5
 python ParserApp.py
 ```
 
-The GUI has its own lexer, so it takes raw JSON typed into the input box. It handles objects, including nested ones, and shows syntax errors in the output pane. It does not enforce the seven semantic rules; use the batch parser for those.
+`pip install -r requirements.txt` installs the same dependency. The GUI takes raw JSON typed into the input box and runs the same parser as the batch entry point, so the same syntax and semantic rules apply. Objects, arrays, and nesting all work. Errors show in the output pane.
+
+## Example
+
+A token file for `{"person": {"firstName": "Bob"}}`:
+
+```text
+<LBRACE>
+<STRING, person>
+<COLON>
+<LBRACE>
+<STRING, firstName>
+<COLON>
+<STRING, Bob>
+<RBRACE>
+<RBRACE>
+```
+
+`python parser.py` writes this tree to `output_files/parsed_<name>.txt`:
+
+```text
+Object:
+  Pair:
+    Key: person
+    Value: Object:
+      Pair:
+        Key: firstName
+        Value: String: Bob
+```
 
 ## Project Layout
 
 - `lexer.py`: TokenType, Token, Lexer, and LexerError
 - `parser.py`: ParseNode, Parser, SemanticError, and the batch entry point
 - `ParserApp.py`: the PyQt5 GUI
-- `input_files/`: sample token files
-- `output_files/`: generated parse trees
+- `ParserApp.spec`: PyInstaller recipe for building the Windows exe
+- `input_files/`: sample inputs
+- `tests/`: pytest suite for the parser
+- `output_files/`: generated parse trees (gitignored)
 
 ## Tests
 
-None yet.
+`tests/` covers the parser: happy-path objects and arrays, nesting, empty input, and all seven SemanticError types. GitHub Actions runs the suite on every push and pull request.
+
+```bash
+python -m pytest tests/ -q
+```
