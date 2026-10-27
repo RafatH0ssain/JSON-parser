@@ -1,5 +1,6 @@
 from lexer import TokenType, Token
 import os
+from pathlib import Path
 
 class ParseNode:
     def __init__(self, node_type, value=None):
@@ -12,26 +13,23 @@ class ParseNode:
 
     def __repr__(self, level=0):
         indent = " " * (level * 2)
-        if self.node_type == "Object":
-            result = f"{indent}Object:\n"
-            for child in self.children:
-                result += child.__repr__(level + 1)
-        elif self.node_type == "Array":
-            result = f"{indent}Array:\n"
-            for child in self.children:
-                result += child.__repr__(level + 1)
-        elif self.node_type == "Pair":
-            key_node = self.children[0]
-            value_node = self.children[1]
-            result = f"{indent}Pair:\n"
-            result += f"{indent}  Key: {key_node.__repr__(level + 1)}\n"
-            result += f"{indent}  Value: {value_node.__repr__(level + 1)}"
-        elif self.node_type == "Key":
-            result = f"{indent}Key: {self.value}"
-        else:
-            result = f"{indent}{self.node_type}: {self.value}"
-        
-        return result
+        if self.node_type in ("Object", "Array"):
+            lines = [f"{indent}{self.node_type}:"]
+            lines += [child.__repr__(level + 1) for child in self.children]
+            return "\n".join(lines)
+        if self.node_type == "Pair":
+            key_node, value_node = self.children
+            first, *rest = value_node.__repr__(level + 1).split("\n")
+            # first line renders inline after the Value label; deeper lines keep their indent
+            value_text = first.lstrip()
+            if rest:
+                value_text += "\n" + "\n".join(rest)
+            return (f"{indent}Pair:\n"
+                    f"{indent}  Key: {key_node.value}\n"
+                    f"{indent}  Value: {value_text}")
+        if self.node_type == "Key":
+            return f"{indent}Key: {self.value}"
+        return f"{indent}{self.node_type}: {self.value}"
 
 class SemanticError(Exception):
     
@@ -205,5 +203,5 @@ if __name__ == "__main__":
 
     for input_filename in os.listdir(input_dir):
         input_file_path = os.path.join(input_dir, input_filename)
-        output_file_path = os.path.join(output_dir, f"parsed_{input_filename}.txt")
+        output_file_path = os.path.join(output_dir, f"parsed_{Path(input_filename).stem}.txt")
         process_file(input_file_path, output_file_path)
