@@ -76,11 +76,13 @@ class Parser:
             self.eat(TokenType.STRING)
             return ParseNode("String", token.value)
         elif token.type == TokenType.NUMBER:
+            # lexer.py yields int/float values; the batch token loader yields strings
+            value = str(token.value)
             # Invalid Numbers (Type 3 Error): Check for leading zeros
-            if token.value.startswith("0") and len(token.value) > 1 and not token.value.startswith("0."):
+            if value.startswith("0") and len(value) > 1 and not value.startswith("0."):
                 raise SemanticError(3, token, "Invalid Numbers: Leading zeros are not allowed.")
             # Invalid Decimal Numbers (Type 1 Error): Decimal numbers should have digits on both sides
-            if '.' in token.value and (token.value.startswith('.') or token.value.endswith('.')):
+            if '.' in value and (value.startswith('.') or value.endswith('.')):
                 raise SemanticError(1, token, "Invalid Decimal Numbers")
             self.eat(TokenType.NUMBER)
             return ParseNode("Number", token.value)

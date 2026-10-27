@@ -1,5 +1,6 @@
 import pytest
 
+from lexer import Lexer
 from parser import Parser, SemanticError, parse_token_line
 
 
@@ -107,6 +108,15 @@ def test_render_tree():
         "<RBRACE>",
     ])
     assert str(tree) == "Object:\n  Pair:\n    Key: name\n    Value: String: Bob"
+
+
+def test_lexer_tokens_parse():
+    # the GUI feeds lexer.py output straight into the parser
+    tree = Parser(Lexer('{"name": "Bob", "age": 25, "height": 5.75}').tokenize()).parse()
+    assert tree.node_type == "Object"
+    assert [child.children[0].value for child in tree.children] == ["name", "age", "height"]
+    assert [child.children[1].node_type for child in tree.children] == ["String", "Number", "Number"]
+    assert str(tree).endswith("Value: Number: 5.75")
 
 
 def test_missing_colon_raises():
