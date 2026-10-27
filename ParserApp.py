@@ -1,86 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton
 from PyQt5.QtCore import Qt
-from lexer import Lexer, TokenType, Token
-from parser import Parser, ParseNode, SemanticError
-
-class Parser:
-    def __init__(self, tokens):
-        self.tokens = tokens
-        self.current_pos = 0
-        self.current_token = self.tokens[self.current_pos]
-
-    def advance(self):
-        self.current_pos += 1
-        if self.current_pos < len(self.tokens):
-            self.current_token = self.tokens[self.current_pos]
-        else:
-            self.current_token = Token(TokenType.EOF)
-
-    def parse(self):
-        # Start parsing based on the first token type
-        if self.current_token.type == TokenType.LBRACE:
-            return self.parse_object()
-        else:
-            raise SyntaxError(f"Unexpected token type at the beginning: {self.current_token.type}")
-
-    def parse_object(self):
-        output = "Object:\n"
-        self.advance()  # Skip the LBRACE
-
-        # Check for empty objects
-        if self.current_token.type == TokenType.RBRACE:
-            self.advance()
-            return output
-
-        while self.current_token.type != TokenType.EOF:
-            output += self.parse_pair()
-
-            if self.current_token.type == TokenType.RBRACE:
-                self.advance()
-                break
-            elif self.current_token.type == TokenType.COMMA:
-                self.advance()
-            else:
-                raise SyntaxError(f"Expected ',' or '}}' but found {self.current_token.type}")
-
-        return output
-
-    def parse_pair(self):
-        output = f"  Pair:\n"
-        key_token = self.current_token
-
-        output += f"    Key: {key_token.type}: {key_token.value}\n"
-        self.advance()  # Advance after reading the key token
-
-        # Check for colon (':') after key
-        # if self.current_token.type != TokenType.COLON:
-        #     raise SyntaxError(f"Expected ':' after key but found {self.current_token.type}")
-        
-        # self.advance()  # Advance after the colon to move to the value token
-
-        # Now handle the value token
-        value_token = self.current_token
-
-        if value_token.type == TokenType.STRING:
-            output += f"    Value: {value_token.type}: {value_token.value}\n"
-        elif value_token.type == TokenType.NUMBER:
-            output += f"    Value: {value_token.type}: {value_token.value}\n"
-        elif value_token.type == TokenType.TRUE:
-            output += f"    Value: {value_token.type}: {value_token.value}\n"
-        elif value_token.type == TokenType.FALSE:
-            output += f"    Value: {value_token.type}: {value_token.value}\n"
-        elif value_token.type == TokenType.NULL:
-            output += f"    Value: {value_token.type}: {value_token.value}\n"
-        elif value_token.type == TokenType.LBRACE:  # Handle nested object
-            output += f"    Value: Object:\n"
-            self.advance()  # Move to the next token (the opening brace)
-            output += self.parse_object()  # Recursively parse the nested object
-        else:
-            raise SyntaxError(f"Unexpected value token type: {value_token.type}")
-
-        self.advance()  # Move past the value token (if it's not EOF)
-        return output
+from lexer import Lexer
+from parser import Parser, SemanticError
 
 
 class ParserApp(QWidget):
@@ -127,12 +49,12 @@ class ParserApp(QWidget):
             # Tokenize the input
             tokens = lexer.tokenize()
 
-            # Now parse the tokens
+            # Parse with the shared recursive-descent parser (same rules as parser.py)
             parser = Parser(tokens)
             parsed_output = parser.parse()
 
             # Display the parsed output
-            self.output_text.setPlainText(parsed_output)
+            self.output_text.setPlainText(str(parsed_output))
 
         except SemanticError as se:
             # Handle semantic errors (e.g., invalid key names, invalid tokens, etc.)
