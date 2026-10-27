@@ -1,10 +1,7 @@
-# Build output
-dist/
 build/
-*.exe
-*.spec
-
-# Python
+dist/
 __pycache__/
 *.pyc
-.venv/
+output_files/
+*.pkg
+*.pyz
